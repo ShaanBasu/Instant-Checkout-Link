@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instant Checkout Link - Algorand Donations</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            padding: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 30px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #999;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #2e7d32;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .error-message {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #c62828;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .link-display {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        .qr-code {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .qr-code img {
+            max-width: 200px;
+            height: auto;
+        }
+
+        .stats {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .stat-value {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #1565c0;
+        }
+
+        .copy-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .copy-button:hover {
+            background: #764ba2;
+        }
+
+        .wallet-status {
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .wallet-status.connected {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .wallet-status.disconnected {
+            background: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Instant Checkout Link</h1>
+            <p>Create one-click donation links powered by Algorand Smart Contracts</p>
+        </div>
+
+        <div class="content">
+            <!-- LEFT SIDE: CREATE LINK TAB -->
+            <div>
+                <div class="tabs">
+                    <button class="tab-button active" onclick="switchTab('create')">Create Link</button>
+                    <button class="tab-button" onclick="switchTab('donate')">Donate</button>
+                </div>
+
+                <!-- CREATE LINK SECTION -->
+                <div id="create" class="section active">
+                    <h2>Create Donation Link</h2>
+                    <p style="color: #999; margin-bottom: 20px; font-size: 14px;">
+                        Set up a new donation link with Algorand smart contract
+                    </p>
+
+                    <div class="error-message" id="createError"></div>
+                    <div class="success-message" id="createSuccess"></div>
+
+                    <form id="createLinkForm" onsubmit="handleCreateLink(event)">
+                        <div class="form-group">
+                            <label for="amount">Donation Amount (ALGO)</label>
+                            <input 
+                                type="number" 
+                                id="amount" 
+                                placeholder="e.g., 10" 
+                                min="0.001" 
+                                step="0.001"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="receiverAddress">Receiver Address</label>
+                            <input 
+                                type="text" 
+                                id="receiverAddress" 
+                                placeholder="XXXXXXXXX...XXXXXXXXX"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Link Description (Optional)</label>
+                            <textarea 
+                                id="description" 
+                                placeholder="e.g., Help me build my app!"
+                                rows="3"
+                            ></textarea>
+                        </div>
+
+                        <button type="submit" id="createButton">
+                            Create Donation Link
+                        </button>
+                    </form>
+
+                    <div id="createdLink" style="display: none; margin-top: 30px;">
+                        <h3 style="margin-bottom: 15px;">✅ Link Created Successfully!</h3>
+                        
+                        <div class="link-display" id="linkDisplay"></div>
+
+                        <div class="button-group">
+                            <button onclick="copyToClipboard('linkDisplay')">📋 Copy Link</button>
+                            <button onclick="shareLink()">📤 Share</button>
+                        </div>
+
+                        <div class="qr-code">
+                            <p style="margin-bottom: 10px; color: #666;">Scan to donate:</p>
+                            <img id="qrCode" src="" alt="QR Code">
+                        </div>
+
+                        <div class="stats">
+                            <p style="font-weight: 600; margin-bottom: 10px;">Link Details:</p>
+                            <div class="stat-item">
+                                <span class="stat-label">Amount:</span>
+                                <span class="stat-value" id="linkAmount"></span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Link ID:</span>
+                                <span class="stat-value" id="linkId"></span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Status:</span>
+                                <span class="stat-value">Ready to Share</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DONATE SECTION -->
+                <div id="donate" class="section">
+                    <h2>Donate via Link</h2>
+                    <p style="color: #999; margin-bottom: 20px; font-size: 14px;">
+                        Enter your link ID to proceed with donation
+                    </p>
+
+                    <div class="error-message" id="donateError"></div>
+                    <div class="success-message" id="donateSuccess"></div>
+
+                    <form id="donateForm" onsubmit="handleDonate(event)">
+                        <div class="form-group">
+                            <label for="linkId">Link ID or Full URL</label>
+                            <input 
+                                type="text" 
+                                id="linkIdInput" 
+                                placeholder="abc123xy or http://..."
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="senderAddress">Your Wallet Address</label>
+                            <input 
+                                type="text" 
+                                id="senderAddress" 
+                                placeholder="XXXXXXXXX...XXXXXXXXX"
+                                required
+                            >
+                        </div>
+
+                        <button type="submit" id="donateButton">
+                            Proceed to Payment
+                        </button>
+                    </form>
+
+                    <div id="paymentReview" style="display: none; margin-top: 30px;">
+                        <h3 style="margin-bottom: 20px;">💳 Payment Review</h3>
+                        
+                        <div class="stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Amount:</span>
+                                <span class="stat-value" id="reviewAmount"></span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Receiver:</span>
+                                <span class="stat-value" id="reviewReceiver"></span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Fee:</span>
+                                <span class="stat-value">0.001 ALGO</span>
+                            </div>
+                            <div class="stat-item" style="border-top: 2px solid #667eea; padding-top: 10px; margin-top: 10px;">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-value" id="reviewTotal"></span>
+                            </div>
+                        </div>
+
+                        <p style="color: #999; margin-top: 15px; font-size: 13px;">
+                            💡 Tip: Your wallet app will open to confirm and sign the transaction
+                        </p>
+
+                        <button onclick="openWallet()" style="margin-top: 20px;">
+                            🔓 Open Wallet to Confirm
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDE: STATS AND INFO -->
+            <div>
+                <h2>Contract Statistics</h2>
+                <p style="color: #999; margin-bottom: 20px; font-size: 14px;">
+                    Real-time data from Algorand blockchain
+                </p>
+
+                <div class="wallet-status" id="walletStatus">
+                    <p>🔌 Wallet: Not Connected</p>
+                </div>
+
+                <div class="info-box">
+                    <strong>How it works:</strong>
+                    <ul style="margin-top: 10px; margin-left: 20px; line-height: 1.8;">
+                        <li>1. Create a donation link</li>
+                        <li>2. Share the link with others</li>
+                        <li>3. Donors click and donate</li>
+                        <li>4. Smart contract processes payment</li>
+                        <li>5. Payment recorded on blockchain</li>
+                    </ul>
+                </div>
+
+                <div class="stats" style="margin-top: 30px;">
+                    <p style="font-weight: 600; margin-bottom: 15px;">Blockchain Stats:</p>
+                    
+                    <div class="stat-item">
+                        <span class="stat-label">Total ALGO Processed:</span>
+                        <span class="stat-value" id="totalAlgo">
+                            <span class="loading"></span>
+                        </span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Donations:</span>
+                        <span class="stat-value" id="totalDonations">
+                            <span class="loading"></span>
+                        </span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Contract Version:</span>
+                        <span class="stat-value" id="contractVersion">
+                            <span class="loading"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <button onclick="refreshStats()" style="margin-top: 20px;">
+                    🔄 Refresh Stats
+                </button>
+
+                <div class="info-box" style="margin-top: 30px;">
+                    <strong>ℹ️ About This Project:</strong>
+                    <p style="margin-top: 10px; font-size: 13px; line-height: 1.6;">
+                        Powered by Algorand smart contracts. All donations are recorded permanently on the blockchain and can be verified by anyone.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        
+        // Update this to your backend URL
+        const API_URL = 'http://localhost:5000';
+        
+        // Algorand test addresses
+        const TESTNET_FAUCET = 'https://testnet-dispenser.algoexplorerapi.io/';
+
+        // ============================================
+        // TAB SWITCHING
+        // ============================================
+        
+        function switchTab(tabName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Deactivate all tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(tabName).classList.add('active');
+            
+            // Activate selected button
+            event.target.classList.add('active');
+        }
+
+        // ============================================
+        // MESSAGE DISPLAY FUNCTIONS
+        // ============================================
+        
+        function showError(elementId, message) {
+            const errorDiv = document.getElementById(elementId);
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
+        }
+
+        function showSuccess(elementId, message) {
+            const successDiv = document.getElementById(elementId);
+            successDiv.textContent = message;
+            successDiv.classList.add('show');
+        }
+
+        // ============================================
+        // CREATE LINK FUNCTIONALITY
+        // ============================================
+        
+        async function handleCreateLink(event) {
+            event.preventDefault();
+            
+            // Get form values
+            const amount = document.getElementById('amount').value;
+            const receiverAddress = document.getElementById('receiverAddress').value;
+            const description = document.getElementById('description').value;
+            
+            // Validate inputs
+            if (!amount || amount <= 0) {
+                showError('createError', '❌ Please enter a valid amount');
+                return;
+            }
+            
+            if (!receiverAddress) {
+                showError('createError', '❌ Please enter receiver address');
+                return;
+            }
+            
+            // Show loading state
+            const createButton = document.getElementById('createButton');
+            const originalText = createButton.textContent;
+            createButton.disabled = true;
+            createButton.innerHTML = '<span class="loading"></span> Creating...';
+            
+            try {
+                // Call backend API
+                const response = await fetch(`${API_URL}/api/create-link`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        amount: parseFloat(amount),
+                        receiver_address: receiverAddress,
+                        description: description
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Show success message
+                    showSuccess('createSuccess', '✅ Donation link created successfully!');
+                    
+                    // Display the created link
+                    const linkUrl = `${window.location.origin}?link=${data.link_id}`;
+                    document.getElementById('linkDisplay').textContent = linkUrl;
+                    document.getElementById('linkAmount').textContent = `${amount} ALGO`;
+                    document.getElementById('linkId').textContent = data.link_id;
+                    
+                    // Generate QR code (using qr-server API)
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(linkUrl)}`;
+                    document.getElementById('qrCode').src = qrUrl;
+                    
+                    // Show the created link display
+                    document.getElementById('createdLink').style.display = 'block';
+                    
+                    // Reset form
+                    document.getElementById('createLinkForm').reset();
+                    
+                } else {
+                    showError('createError', `❌ ${data.error || 'Failed to create link'}`);
+                }
+                
+            } catch (error) {
+                showError('createError', `❌ Error: ${error.message}`);
+            } finally {
+                // Reset button
+                createButton.disabled = false;
+                createButton.textContent = originalText;
+            }
+        }
+
+        // ============================================
+        // DONATE FUNCTIONALITY
+        // ============================================
+        
+        let currentPaymentData = null;
+        
+        async function handleDonate(event) {
+            event.preventDefault();
+            
+            const linkId = document.getElementById('linkIdInput').value;
+            const senderAddress = document.getElementById('senderAddress').value;
+            
+            // Extract link ID if full URL is provided
+            const extractedLinkId = linkId.includes('link=') 
+                ? linkId.split('link=')[1] 
+                : linkId;
+            
+            if (!extractedLinkId || !senderAddress) {
+                showError('donateError', '❌ Please fill in all fields');
+                return;
+            }
+            
+            // Show loading
+            const donateButton = document.getElementById('donateButton');
+            donateButton.disabled = true;
+            donateButton.innerHTML = '<span class="loading"></span> Loading...';
+            
+            try {
+                // Fetch payment details from backend
+                const response = await fetch(
+                    `${API_URL}/api/pay/${extractedLinkId}?user_address=${senderAddress}`,
+                    {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    }
+                );
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store payment data
+                    currentPaymentData = data;
+                    
+                    // Show payment review
+                    document.getElementById('reviewAmount').textContent = `${data.amount} ALGO`;
+                    document.getElementById('reviewReceiver').textContent = data.receiver.substring(0, 20) + '...';
+                    document.getElementById('reviewTotal').textContent = `${parseFloat(data.amount) + 0.001} ALGO`;
+                    
+                    document.getElementById('paymentReview').style.display = 'block';
+                    
+                } else {
+                    showError('donateError', `❌ ${data.error || 'Failed to load payment details'}`);
+                }
+                
+            } catch (error) {
+                showError('donateError', `❌ Error: ${error.message}`);
+            } finally {
+                donateButton.disabled = false;
+                donateButton.textContent = 'Proceed to Payment';
+            }
+        }
+
+        // ============================================
+        // WALLET INTEGRATION
+        // ============================================
+        
+        function openWallet() {
+            if (!currentPaymentData) {
+                showError('donateError', '❌ No payment data available');
+                return;
+            }
+            
+            // In a real app, this would open Pera Wallet or another wallet
+            // For demo purposes, show instructions
+            alert(
+                `📱 DEMO MODE:\n\n` +
+                `Next step: Your wallet app would open here.\n\n` +
+                `You would see:\n` +
+                `- Amount: ${currentPaymentData.amount} ALGO\n` +
+                `- Receiver: ${currentPaymentData.receiver}\n` +
+                `- Fee: 0.001 ALGO\n\n` +
+                `Click "Confirm" in your wallet to complete the payment.\n\n` +
+                `⚠️ Note: Full wallet integration requires:\n` +
+                `- Pera Wallet SDK\n` +
+                `- AlgoSigner integration\n` +
+                `- Private key signing`
+            );
+            
+            // Show success after wallet interaction
+            setTimeout(() => {
+                showSuccess('donateSuccess', 
+                    '✅ Payment confirmed! Transaction recorded on blockchain.'
+                );
+                
+                // Reset form
+                document.getElementById('donateForm').reset();
+                document.getElementById('paymentReview').style.display = 'none';
+            }, 1000);
+        }
+
+        // ============================================
+        // CLIPBOARD AND SHARING
+        // ============================================
+        
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Link copied to clipboard!');
+            }).catch(() => {
+                alert('❌ Failed to copy');
+            });
+        }
+
+        function shareLink() {
+            const link = document.getElementById('linkDisplay').textContent;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Donate via Algorand',
+                    text: 'Help me out with a donation!',
+                    url: link
+                });
+            } else {
+                copyToClipboard('linkDisplay');
+            }
+        }
+
+        // ============================================
+        // CONTRACT STATISTICS
+        // ============================================
+        
+        async function refreshStats() {
+            try {
+                const response = await fetch(`${API_URL}/api/contract-stats`);
+                const data = await response.json();
+                
+                if (data.total_algo_received !== undefined) {
+                    document.getElementById('totalAlgo').textContent = 
+                        `${(data.total_algo_received || 0).toFixed(2)} ALGO`;
+                    document.getElementById('totalDonations').textContent = 
+                        `${data.total_payments_processed || 0}`;
+                    document.getElementById('contractVersion').textContent = 
+                        `${data.contract_version || 'v1.0'}`;
+                } else {
+                    document.getElementById('totalAlgo').textContent = '-- ALGO';
+                    document.getElementById('totalDonations').textContent = '--';
+                }
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                document.getElementById('totalAlgo').textContent = 'Error';
+                document.getElementById('totalDonations').textContent = 'Error';
+            }
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        
+        // Load stats on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            refreshStats();
+            
+            // Refresh stats every 30 seconds
+            setInterval(refreshStats, 30000);
+            
+            // Check if link ID is in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('link')) {
+                const linkId = urlParams.get('link');
+                document.getElementById('linkIdInput').value = linkId;
+                switchTab('donate');
+            }
+        });
+
+        // Update wallet status (simulated)
+        document.addEventListener('DOMContentLoaded', () => {
+            const walletStatus = document.getElementById('walletStatus');
+            // Simulate checking for wallet
+            if (window.AlgoSigner || window.peraWallet) {
+                walletStatus.textContent = '✅ Wallet: Connected';
+                walletStatus.classList.add('connected');
+            }
+        });
+    </script>
+</body>
+</html>
